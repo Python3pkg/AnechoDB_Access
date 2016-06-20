@@ -59,7 +59,7 @@ class Connection:
     
     def search_meas_by_instrument(self,var=''):
         ''' 
-        Search wich measurements are linked at the instrument decided by var entry.
+        Search which measurements are linked at the instrument decided by var entry.
         Input:
             var(string):The instrument used for the search (example 'VNA').
         Output:
@@ -78,7 +78,7 @@ class Connection:
         
     def search_meas_by_projects(self,var=''):
         ''' 
-        Search wich measurements are linked at the project decided by var entry.
+        Search which measurements are linked at the project decided by var entry.
         Input:
             var(string):The project used for the search (example 'LSPE').
         Output:
@@ -96,7 +96,7 @@ class Connection:
             return m_id
     def search_beam_by_meas (self,m_id=0):
         ''' 
-        Search wich beams are linked at the measurement identifier decided 
+        Search which beams are linked at the measurement identifier decided 
         by m_id entry.
         Input:
             m_id(int):The measurement identifier used for the search (example 1).
