@@ -2,7 +2,7 @@
 """
 Created on Mon Jun  6 10:52:46 2016
 
-@author: Jacopo Martelli
+author: Jacopo Martelli
 """
 import numpy as np
 import requests
@@ -15,23 +15,28 @@ import h5py
 ### Server
 #==============================================================================
 class Connection:
+    '''
+    Class used for the comunication with the database to find and retrieve beams
+    stored in it.
+    '''
     def __init__(self,host):
-        ''' 
-        Put the host of the database.         
+        '''
+        Put the host of the database.
         '''
         self.host=host
-        
+
     def _find_by_var(self,link='',var='',dat = True):
-        ''' 
-        Return the link or the value of the var entry in the database.
-        If dat=True: return link else dat=False return value of var         
         '''
-        #dat=True return link, dat=False return id
+        Return the link or the value of the var entry in the database.
+
+        If dat=True: return link else dat=False return value of var.
+        '''
+
         l=[]
         r = requests.get(os.path.join(self.host+'/anechodb/api/v1/'+link))
         d = json.loads(r.text)
         s=d['collection']['items']
-        
+
         if dat and var:
             for i in range (np.shape(s)[0]):
                 for j in range (np.shape(s[i]['data'])[0]):
@@ -45,26 +50,32 @@ class Connection:
                          l.append(s[i]['data'][0]['value'])
         return l
     def read_link(self,link,idl):
-        ''' 
+        '''
         Print the json collection of the chosen link entry.
+
         Input:
+
             link(string):the link to the page of the database. It can be only:
                          'operators','instruments','projects','measurements','beams'.
-            idl(int): identifier of the page of the link .        
+
+            idl(int): identifier of the page of the link .
         '''
         r = requests.get(os.path.join(self.host+'/anechodb/api/v1/'+link+
                         '/%d'%idl))
         if r.status_code==200:
             print(json.loads(r.text))
-    
+
     def search_meas_by_instrument(self,var=''):
-        ''' 
+        '''
         Search which measurements are linked at the instrument decided by var entry.
+
         Input:
+
             var(string):The instrument used for the search (example 'VNA').
+
         Output:
-            m_id(array of int):The identifier of the measurement that use the 
-                               instrument.
+
+            m_id(array of int):The identifier of the measurement that use the instrument.
         '''
 
         if var:
@@ -75,15 +86,18 @@ class Connection:
                 rel="/api/v1/instruments/"+str(idl)
                 m_id=Connection._find_by_var(self,'measurements',rel,False)
             return m_id
-        
+
     def search_meas_by_projects(self,var=''):
-        ''' 
+        '''
         Search which measurements are linked at the project decided by var entry.
+
         Input:
+
             var(string):The project used for the search (example 'LSPE').
+
         Output:
-            m_id(array of int):The identifier of the measurement that use the 
-                               project.
+
+            m_id(array of int):The identifier of the measurement that use the project.
         '''
 
         if var:
@@ -95,29 +109,34 @@ class Connection:
                 m_id=Connection._find_by_var(self,'measurements',rel,False)
             return m_id
     def search_beam_by_meas (self,m_id=0):
-        ''' 
-        Search which beams are linked at the measurement identifier decided 
-        by m_id entry.
+        '''
+        Search which beams are linked at the measurement identifier decided by m_id entry.
+
         Input:
+
             m_id(int):The measurement identifier used for the search (example 1).
+
         Output:
-            b_id(array of int):The identifier of the beams linked at the
-                               chosen measurement.
-        '''        
-        
+
+            b_id(array of int):The identifier of the beams linked at the chosen measurement.
+        '''
+
         b_id=[]
         if m_id:
             rel="/api/v1/measurements/"+str(m_id)
             b_id=(Connection._find_by_var(self,'beams',rel,False))
         return b_id
     def get_beam_in_dict_by_id(self,b_id):
-        ''' 
+        '''
         Download the beam chosen by identifier as a dict variable.
+
         Input:
+
             b_id(int):The beam identifier to download (example 1).
+
         Output:
-            beam(dict):The beam downloaded. It has 4 fields as the original .h5
-                       file plus the attribute field with some extra information.
+
+            beam(dict):The beam downloaded. It has 4 fields as the original .h5 file plus the attribute field with some extra information.
         '''
         beam={}
         #Connect and dowload the chosen beam
@@ -136,16 +155,16 @@ class Connection:
                     A={}
                     for k in D.keys():
                         P={}
-                        P['Amplitude']=D['%s/Ampl'%k].value 
+                        P['Amplitude']=D['%s/Ampl'%k].value
                         P['Phase']=D['%s/Phase'%k].value
-                        A['%s'%k]=P    
+                        A['%s'%k]=P
                     beam['%s'%key]=A
                 else:
                     beam['%s'%key]=fid['%s'%key].value
             A={}
             for key in fid.attrs.keys():
                 A['%s'%key]=str(fid.attrs.get('%s'%key))
-            beam['Attributes']=A   
+            beam['Attributes']=A
             fid.close()
         finally:
             os.remove(p_b)
@@ -154,20 +173,26 @@ class Connection:
 ### Computation
 #==============================================================================
 class Computation:
-
+    '''
+    Class with various function useful to apply corrections at the beam patterns.
+    '''
     def make_beam_meanvar(beam,f=[],start=0,stop=-1):
-        ''' 
+        '''
         Apply mean and variance at the data stored in beam at the chosen frequencies.
+
         Input:
-            beam(dict):The beam to be computed
-            f(array of float):The frequencies of the measure to be computed.
-                              If empty all the frequencies in beam will be used.
+
+            beam(dict):The beam to be computed.
+
+            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam will be used.
+
             start(int):Starting index of the measurement array for the computation.
+
             stop(int):Stopping index of the measurement array for the computation.
-                                            
+
         Output:
-            b(dict):The input beam with measurement changed with the mean and with
-                    a new field called Amplitude_Variance with the variance.
+
+            b(dict):The input beam with measurement changed with the mean and with a new field called Amplitude_Variance with the variance.
         '''
         b=copy.deepcopy(beam)
         if not f:
@@ -176,82 +201,79 @@ class Computation:
             id_f=np.where(b['Frequencies']==f[i])
             if b['DUT']['F_%d'%id_f[0]]['Amplitude'].ndim>1:
                 b['DUT']['F_%d'%id_f[0]]['Amplitude_Variance']=np.var(b['DUT']
-                            ['F_%d'%id_f[0]]['Amplitude'][:,start:stop],axis=1)    
+                            ['F_%d'%id_f[0]]['Amplitude'][:,start:stop],axis=1)
                 b['DUT']['F_%d'%id_f[0]]['Amplitude']=np.mean(b['DUT']
                             ['F_%d'%id_f[0]]['Amplitude'][:,start:stop],axis=1)
         return b
-        
-        
+
+
     def center_norm_beam(beam,f=[], center = True, norm = True):
-        ''' 
-        Apply normalization and centering at the data stored in beam.
-        Input:
-            beam(dict):The beam to be computed. If Amplitude in beam is a matrix,
-                        the mean of the matrix will be used for this computation.
-            f(array of float):The frequencies of the measure to be computed.
-                              If empty all the frequencies in beam will be used.
-            center(bool or int/float):If center=True, apply centering. If it's 
-                                      a number, this will be used to correct the 
-                                      position.
-            norm(bool or int/float):If norm=True, apply normalization. If it's 
-                                      a number, this will be used as normalization
-                                      factor.
-                                            
-        Output:
-            b(dict):The input beam with Amplitude and Positions computed. The
-                    positions of the original beam are stored in Original_Positions
-                    field and a new field called Correction is created with 
-                    centering and normalization factors stored for each frequency.
         '''
-        b=copy.deepcopy(beam)  
+        Apply normalization and centering at the data stored in beam.
+
+        Input:
+
+            beam(dict):The beam to be computed. If Amplitude in beam is a matrix, the mean of the matrix will be used for this computation.
+
+            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam will be used.
+
+            center(bool or int/float):If center=True, apply centering. If it's a number, this will be used to correct the position.
+
+            norm(bool or int/float):If norm=True, apply normalization. If it's a number, this will be used as normalization factor.
+
+        Output:
+
+            b(dict):The input beam with Amplitude and Positions computed. The positions of the original beam are stored in Original_Positions field and a new field called Correction is created with centering and normalization factors stored for each frequency.
+        '''
+        b=copy.deepcopy(beam)
         corr={}
-        P={}     
+        P={}
         if not f:
             f=b['Frequencies']
-        angle=b['Positions'][:,1]    
+        angle=b['Positions'][:,1]
         for i in range (len(f)):
             c={}
             id_f=np.where(b['Frequencies']==f[i])
-    
+
             if b['DUT']['F_%d'%id_f[0]]['Amplitude'].ndim>1:
                 power=np.mean(b['DUT']['F_%d'%id_f[0]]['Amplitude'],axis=1)
             else:
-                power=b['DUT']['F_%d'%id_f[0]]['Amplitude']    
-                
-            
+                power=b['DUT']['F_%d'%id_f[0]]['Amplitude']
+
+
             # Find window at 3 dB
             maxpower = np.max(power)
             index_main_beam = np.where(power >= maxpower -3.)[0]
             main_beam_power = power[index_main_beam]
             main_beam_angle = angle[index_main_beam]
-            
+
             # Interpolate with parabola
             parabola_fit = np.polyfit(main_beam_angle, main_beam_power, 2)
-        
+
             # Find parabola vertex
             vertex_angle = -parabola_fit[1]/2./parabola_fit[0]
-            
+
             # Find parabola maximum
             det = parabola_fit[1]**2 - 4.*parabola_fit[0]*parabola_fit[2]
             vertex_power = -det / (4. * parabola_fit[0])
-    
+
             if type(center == bool):
                 if center == True:
                     newangle = angle - vertex_angle
                 else:
                     newangle = angle
-        
+
             if type(center) == float or type(center) == int:
-                newangle = angle - float(center)            
-                    
+                newangle = angle - float(center)
+
             if type(norm == bool):
                 if norm == True:
                     newpower = power - vertex_power
                 else:
                     newpower = power
-            
+
             if type(norm) == int or type(norm) == float:
-                newpower = power - norm    
+                newpower = power - norm
             b['DUT']['F_%d'%id_f[0]]['Amplitude']=newpower
             P['F_%d'%id_f[0]]=newangle
             c['Center']=vertex_angle
@@ -261,11 +283,30 @@ class Computation:
         b['Positions']=P
         b['Correction']=corr
         return b
-        
+
     def phase_center(L,d,angle,magn):
-        # d:distance between receiver feed(phase center) and rotation centre[m]
-        # L:distance between receiver feed and trasmitter feed[m] 
-    
+        '''
+        Compute needed correction if the phase center of the antenna is not placed at the rotation centre of the measuring system.
+
+        Input:
+
+            L(int or float):distance between receiver feed and trasmitter feed[m].
+
+            d(int or float):distance between phase center of receiver feed and rotation centre[m].
+
+            angle(array):The positions of the measure.
+
+            magn(array):The amplitude of the measure.
+
+        Output:
+
+            corr_phase(tuple of float): Cointaning the correction factors applied at the positions and at the magnitudes.
+
+            newangle(array): The positions with the correction applied.
+
+            newpower(array): The amplitudes with the correction applied.
+        '''
+
         corr_ang=np.rad2deg(np.arctan2(d*np.sin(np.deg2rad(angle)),L+d*(1-np.cos(np.deg2rad(angle)))))
         newangle=angle+corr_ang
         L_true=np.sqrt((d*np.sin(np.deg2rad(angle)))**2+(L+d*(1-np.cos(np.deg2rad(angle))))**2)
@@ -273,9 +314,28 @@ class Computation:
         newpower=magn+corr_pow
         corr_phase=(corr_ang,corr_pow)
         return (corr_phase,newangle, newpower)
-        
+
     def sim_diff (angle_sim,angle_mis,magn_sim,magn_mis):
-        tot_ind=np.zeros(np.shape(angle_mis))
+        '''
+        Compute difference between simulation and measured data.
+        Check the nearest angle between simulation and measure and apply difference between them. More discrete are the simulation angles more the computation is correct.
+
+        N.B. It's up to the user to choose the same frequency for simulation and measure.
+
+        Input:
+
+            angle_sim(array):The positions used in simulation.
+
+            angle_mis(array):The positions of the measure.
+
+            magn_sim(array):The amplitude obtained from simulation.
+
+            magn_mis(array):The amplitude of the measure.
+
+        Output:
+
+            diff(array):The array cointaining the difference computed.
+        '''
         diff=np.zeros(np.shape(angle_mis))
         for i in range(0, np.shape(angle_mis)[0]):
             index=np.where(angle_sim>=angle_mis[i])[0][0]
@@ -283,7 +343,6 @@ class Computation:
                 index=index-1
             else:
                 pass
-            tot_ind[i]=index
             diff[i]=magn_mis[i]-magn_sim[index]
             del index
-        return (diff,tot_ind)
+        return diff
