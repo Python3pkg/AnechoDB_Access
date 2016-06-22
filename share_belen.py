@@ -223,7 +223,8 @@ class Computation:
 
         Output:
 
-            b(dict):The input beam with Amplitude and Positions computed. The positions of the original beam are stored in Original_Positions field and a new field called Correction is created with centering and normalization factors stored for each frequency.
+            b(dict):The input beam with Amplitude and Positions computed. The positions of the original beam are stored in Original_Positions
+            field and a new field called Correction is created with centering and normalization factors stored for each frequency.
         '''
         b=copy.deepcopy(beam)
         corr={}
@@ -318,7 +319,8 @@ class Computation:
     def sim_diff (angle_sim,angle_mis,magn_sim,magn_mis):
         '''
         Compute difference between simulation and measured data.
-        Check the nearest angle between simulation and measure and apply difference between them. More discrete are the simulation angles more the computation is correct.
+        Check the nearest angle between simulation and measure and apply difference between them.
+        More discrete are the simulation angles more the computation is correct.
 
         N.B. It's up to the user to choose the same frequency for simulation and measure.
 
