@@ -2,7 +2,7 @@
 """
 Created on Mon Jun  6 10:52:46 2016
 
-author: Jacopo Martelli
+@author: Jacopo Martelli
 """
 import numpy as np
 import requests
@@ -16,8 +16,7 @@ import h5py
 #==============================================================================
 class Connection:
     '''
-    Class used for the comunication with the database to find and retrieve beams
-    stored in it.
+    Class used for the comunication with the database to find and retrieve beams stored in it.
     '''
     def __init__(self,host):
         '''
@@ -49,6 +48,7 @@ class Connection:
                     if var in s[i]['links'][j]['rel']:
                          l.append(s[i]['data'][0]['value'])
         return l
+
     def read_link(self,link,idl):
         '''
         Print the json collection of the chosen link entry.
@@ -108,6 +108,7 @@ class Connection:
                 rel="/api/v1/projects/"+str(idl)
                 m_id=Connection._find_by_var(self,'measurements',rel,False)
             return m_id
+
     def search_beam_by_meas (self,m_id=0):
         '''
         Search which beams are linked at the measurement identifier decided by m_id entry.
@@ -126,6 +127,7 @@ class Connection:
             rel="/api/v1/measurements/"+str(m_id)
             b_id=(Connection._find_by_var(self,'beams',rel,False))
         return b_id
+
     def get_beam_in_dict_by_id(self,b_id):
         '''
         Download the beam chosen by identifier as a dict variable.
@@ -147,7 +149,7 @@ class Connection:
         try:
             with os.fdopen(f_b, 'wb') as tmp:
                 tmp.write(r.content)
-            #create dict variable beam
+            #Create dict variable beam
             fid=h5py.File(p_b,'r')
             for key in fid.keys():
                 if key=='DUT' or key=='REF':
@@ -184,7 +186,7 @@ class Computation:
 
             beam(dict):The beam to be computed.
 
-            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam will be used.
+            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam are used.
 
             start(int):Starting index of the measurement array for the computation.
 
@@ -213,13 +215,13 @@ class Computation:
 
         Input:
 
-            beam(dict):The beam to be computed. If Amplitude in beam is a matrix, the mean of the matrix will be used for this computation.
+            beam(dict):The beam to be computed. If Amplitude in beam is a matrix, the mean of the matrix is used for this computation.
 
-            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam will be used.
+            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam are used.
 
-            center(bool or int/float):If center=True, apply centering. If it's a number, this will be used to correct the position.
+            center(bool or int/float):If center=True, apply centering. If it's a number, this is used to correct the position.
 
-            norm(bool or int/float):If norm=True, apply normalization. If it's a number, this will be used as normalization factor.
+            norm(bool or int/float):If norm=True, apply normalization. If it's a number, this is used as normalization factor.
 
         Output:
 
@@ -301,7 +303,7 @@ class Computation:
 
         Output:
 
-            corr_phase(tuple of float): Cointaning the correction factors applied at the positions and at the magnitudes.
+            corr_phase(tuple of float): Containing the correction factors applied at the positions and at the magnitudes.
 
             newangle(array): The positions with the correction applied.
 
@@ -336,7 +338,7 @@ class Computation:
 
         Output:
 
-            diff(array):The array cointaining the difference computed.
+            diff(array):The array containing the difference computed.
         '''
         diff=np.zeros(np.shape(angle_mis))
         for i in range(0, np.shape(angle_mis)[0]):
