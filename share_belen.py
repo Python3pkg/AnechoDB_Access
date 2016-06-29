@@ -28,7 +28,7 @@ class Connection:
         '''
         Return the link or the value of the var entry in the database.
 
-        If dat=True: return link else dat=False return value of var.
+        If dat=True return link else, dat=False, return value of var.
         '''
 
         l=[]
@@ -55,7 +55,7 @@ class Connection:
 
         Input:
 
-            link(string):the link to the page of the database. It can be only:
+            link(string):the link to the page of the database. It can only be:
                          'operators','instruments','projects','measurements','beams'.
 
             idl(int): identifier of the page of the link .
@@ -184,9 +184,9 @@ class Computation:
 
         Input:
 
-            beam(dict):The beam to be computed.
+            beam(dict):The beam to be computed. The Amplitude field stored should be a matrix to apply mean and variance along the measurement points.
 
-            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam are used.
+            f(list of float):The frequencies of the measure to be computed. If empty all the frequencies in beam are used. If it's only a number use as input a list(Example f=[40])
 
             start(int):Starting index of the measurement array for the computation.
 
@@ -197,15 +197,17 @@ class Computation:
             b(dict):The input beam with measurement changed with the mean and with a new field called Amplitude_Variance with the variance.
         '''
         b=copy.deepcopy(beam)
+        if not isinstance(f, list):
+            f=list(f)
         if not f:
             f=b['Frequencies']
         for i in range (len(f)):
             id_f=np.where(b['Frequencies']==f[i])
-            if b['DUT']['F_%d'%id_f[0]]['Amplitude'].ndim>1:
-                b['DUT']['F_%d'%id_f[0]]['Amplitude_Variance']=np.var(b['DUT']
-                            ['F_%d'%id_f[0]]['Amplitude'][:,start:stop],axis=1)
-                b['DUT']['F_%d'%id_f[0]]['Amplitude']=np.mean(b['DUT']
-                            ['F_%d'%id_f[0]]['Amplitude'][:,start:stop],axis=1)
+            if (b['DUT']['F_%d'%id_f[0][0]]['Amplitude'].ndim>1) and id_f:
+                b['DUT']['F_%d'%id_f[0][0]]['Amplitude_Variance']=np.var(b['DUT']
+                            ['F_%d'%id_f[0][0]]['Amplitude'][:,start:stop],axis=1)
+                b['DUT']['F_%d'%id_f[0][0]]['Amplitude']=np.mean(b['DUT']
+                            ['F_%d'%id_f[0][0]]['Amplitude'][:,start:stop],axis=1)
         return b
 
 
@@ -217,7 +219,7 @@ class Computation:
 
             beam(dict):The beam to be computed. If Amplitude in beam is a matrix, the mean of the matrix is used for this computation.
 
-            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam are used.
+            f(array of float):The frequencies of the measure to be computed. If empty all the frequencies in beam are used. If it's only a number use as input a list(Example f=[40])
 
             center(bool or int/float):If center=True, apply centering. If it's a number, this is used to correct the position.
 
@@ -231,6 +233,8 @@ class Computation:
         b=copy.deepcopy(beam)
         corr={}
         P={}
+        if not isinstance(f, list):
+            f=list(f)
         if not f:
             f=b['Frequencies']
         angle=b['Positions'][:,1]
@@ -238,10 +242,10 @@ class Computation:
             c={}
             id_f=np.where(b['Frequencies']==f[i])
 
-            if b['DUT']['F_%d'%id_f[0]]['Amplitude'].ndim>1:
-                power=np.mean(b['DUT']['F_%d'%id_f[0]]['Amplitude'],axis=1)
+            if b['DUT']['F_%d'%id_f[0][0]]['Amplitude'].ndim>1:
+                power=np.mean(b['DUT']['F_%d'%id_f[0][0]]['Amplitude'],axis=1)
             else:
-                power=b['DUT']['F_%d'%id_f[0]]['Amplitude']
+                power=b['DUT']['F_%d'%id_f[0][0]]['Amplitude']
 
 
             # Find window at 3 dB
@@ -277,11 +281,11 @@ class Computation:
 
             if type(norm) == int or type(norm) == float:
                 newpower = power - norm
-            b['DUT']['F_%d'%id_f[0]]['Amplitude']=newpower
-            P['F_%d'%id_f[0]]=newangle
+            b['DUT']['F_%d'%id_f[0][0]]['Amplitude']=newpower
+            P['F_%d'%id_f[0][0]]=newangle
             c['Center']=vertex_angle
             c['Norm']=vertex_power
-            corr['F_%d'%id_f[0]]=c
+            corr['F_%d'%id_f[0][0]]=c
         b['Original_positions']=b['Positions']
         b['Positions']=P
         b['Correction']=corr
@@ -293,7 +297,7 @@ class Computation:
 
         Input:
 
-            L(int or float):distance between receiver feed and trasmitter feed[m].
+            L(int or float):distance between receiver feed and transmitter feed[m].
 
             d(int or float):distance between phase center of receiver feed and rotation centre[m].
 
