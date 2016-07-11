@@ -237,7 +237,7 @@ class Computation:
         b=copy.deepcopy(beam)
         corr={}
         P={}
-        if all([b['Attributes']['Type'][-1]!='O',type(center) == bool,type(norm) == bool]):
+        if all([b['Attributes']['Type'][-1]!='O',(type(center) == bool or type(norm) == bool)]):
             next
         else:
             if not isinstance(f, list):
