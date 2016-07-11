@@ -229,71 +229,81 @@ class Computation:
 
             b(dict):The input beam with Amplitude and Positions computed. The positions of the original beam are stored in Original_Positions
             field and a new field called Correction is created with centering and normalization factors stored for each frequency.
+
+        Notes:
+
+            If the beam is not copolar (it's seen in the Attributes field) input variables center and norm MUST be numbers to use this function.
         '''
         b=copy.deepcopy(beam)
         corr={}
         P={}
-        if not isinstance(f, list):
-            f=list(f)
-        if not f:
-            f=b['Frequencies']
-        angle=b['Positions'][:,1]
-        for i in range (len(f)):
-            c={}
-            id_f=np.where(b['Frequencies']==f[i])
+        if all([b['Attributes']['Type'][-1]!='O',type(center) == bool,type(norm) == bool]):
+            next
+        else:
+            if not isinstance(f, list):
+                f=list(f)
+            if not f:
+                f=b['Frequencies']
+            angle=b['Positions'][:,1]
+            for i in range (len(f)):
+                c={}
+                id_f=np.where(b['Frequencies']==f[i])
 
-            if b['DUT']['F_%d'%id_f[0][0]]['Amplitude'].ndim>1:
-                power=np.mean(b['DUT']['F_%d'%id_f[0][0]]['Amplitude'],axis=1)
-            else:
-                power=b['DUT']['F_%d'%id_f[0][0]]['Amplitude']
+                if b['DUT']['F_%d'%id_f[0][0]]['Amplitude'].ndim>1:
+                    power=np.mean(b['DUT']['F_%d'%id_f[0][0]]['Amplitude'],axis=1)
+                else:
+                    power=b['DUT']['F_%d'%id_f[0][0]]['Amplitude']
 
 
-            # Find window at 3 dB
-            maxpower = np.max(power)
-            index_main_beam = np.where(power >= maxpower -3.)[0]
-            main_beam_power = power[index_main_beam]
-            main_beam_angle = angle[index_main_beam]
+                # Find window at 3 dB
+                maxpower = np.max(power)
+                index_main_beam = np.where(power >= maxpower -3.)[0]
+                main_beam_power = power[index_main_beam]
+                main_beam_angle = angle[index_main_beam]
 
-            # Interpolate with parabola
-            parabola_fit = np.polyfit(main_beam_angle, main_beam_power, 2)
+                # Interpolate with parabola
+                parabola_fit = np.polyfit(main_beam_angle, main_beam_power, 2)
 
-            # Find parabola vertex
-            vertex_angle = -parabola_fit[1]/2./parabola_fit[0]
+                # Find parabola vertex
+                vertex_angle = -parabola_fit[1]/2./parabola_fit[0]
 
-            # Find parabola maximum
-            det = parabola_fit[1]**2 - 4.*parabola_fit[0]*parabola_fit[2]
-            vertex_power = -det / (4. * parabola_fit[0])
+                # Find parabola maximum
+                det = parabola_fit[1]**2 - 4.*parabola_fit[0]*parabola_fit[2]
+                vertex_power = -det / (4. * parabola_fit[0])
 
-            if type(center == bool):
-                if center == True:
+                if type(center) == bool:
+                    if center == True:
+                        newangle = angle - vertex_angle
+                    else:
+                        newangle = angle
+
+                if type(center) == float or type(center) == int:
+                    vertex_angle=float(center)
                     newangle = angle - vertex_angle
-                else:
-                    newangle = angle
 
-            if type(center) == float or type(center) == int:
-                newangle = angle - float(center)
+                if type(norm) == bool:
+                    if norm == True:
+                        newpower = power - vertex_power
+                    else:
+                        newpower = power
 
-            if type(norm == bool):
-                if norm == True:
+                if type(norm) == int or type(norm) == float:
+                    vertex_power=float(norm)
                     newpower = power - vertex_power
-                else:
-                    newpower = power
 
-            if type(norm) == int or type(norm) == float:
-                newpower = power - norm
-            b['DUT']['F_%d'%id_f[0][0]]['Amplitude']=newpower
-            P['F_%d'%id_f[0][0]]=newangle
-            c['Center']=vertex_angle
-            c['Norm']=vertex_power
-            corr['F_%d'%id_f[0][0]]=c
-        b['Original_positions']=b['Positions']
-        b['Positions']=P
-        b['Correction']=corr
+                b['DUT']['F_%d'%id_f[0][0]]['Amplitude']=newpower
+                P['F_%d'%id_f[0][0]]=newangle
+                c['Center']=vertex_angle
+                c['Norm']=vertex_power
+                corr['F_%d'%id_f[0][0]]=c
+            b['Original_positions']=b['Positions']
+            b['Positions']=P
+            b['Correction']=corr
         return b
 
     def phase_center(L,d,angle,magn):
         '''
-        Compute needed correction if the phase center of the antenna is not placed at the rotation centre of the measuring system.
+         Compute correction in the case the phase center of the antenna is not placed at the rotation axis of the measuring system.
 
         Input:
 
