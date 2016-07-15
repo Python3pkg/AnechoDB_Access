@@ -65,7 +65,7 @@ class Connection:
         if r.status_code==200:
             print(json.loads(r.text))
 
-    def search_meas_by_instrument(self,var=''):
+    def search_meas_by_instruments(self,var=''):
         '''
         Search which measurements are linked at the instrument decided by var entry.
 
@@ -178,7 +178,7 @@ class Computation:
     '''
     Class with various function useful to apply corrections at the beam patterns.
     '''
-    def make_beam_meanvar(beam,f=[],start=0,stop=-1):
+    def make_beam_meanvar(beam,f=[],start=0,stop=None):
         '''
         Apply mean and variance at the data stored in beam at the chosen frequencies.
 
