@@ -12,44 +12,47 @@ import os
 import tempfile
 import h5py
 #==============================================================================
-### Server
+# Server
 #==============================================================================
+
+
 class Connection:
     '''
     Class used for the comunication with the database to find and retrieve beams stored in it.
     '''
-    def __init__(self,host):
+
+    def __init__(self, host):
         '''
         Put the host of the database.
         '''
-        self.host=host
+        self.host = host
 
-    def _find_by_var(self,link='',var='',dat = True):
+    def _find_by_var(self, link:str='', var:str='', dat:bool=True)->list:
         '''
         Return the link or the value of the var entry in the database.
 
         If dat=True return link else, dat=False, return value of var.
         '''
 
-        l=[]
-        r = requests.get(os.path.join(self.host+'/anechodb/api/v1/'+link))
+        l = []
+        r = requests.get(os.path.join(self.host + '/anechodb/api/v1/' + link))
         d = json.loads(r.text)
-        s=d['collection']['items']
+        s = d['collection']['items']
 
         if dat and var:
-            for i in range (np.shape(s)[0]):
-                for j in range (np.shape(s[i]['data'])[0]):
+            for i in range(np.shape(s)[0]):
+                for j in range(np.shape(s[i]['data'])[0]):
                     if var in s[i]['data'][j].values():
-                        l=s[i]['href']
-                        break
+                        l = s[i]['href']
+                        break#there should be only a link for each entry var
         elif var:
-            for i in range (np.shape(s)[0]):
-                for j in range (np.shape(s[i]['links'])[0]):
+            for i in range(np.shape(s)[0]):
+                for j in range(np.shape(s[i]['links'])[0]):
                     if var in s[i]['links'][j]['rel']:
-                         l.append(s[i]['data'][0]['value'])
+                        l.append(s[i]['data'][0]['value'])
         return l
 
-    def read_link(self,link,idl):
+    def print_link(self, link, idl):
         '''
         Print the json collection of the chosen link entry.
 
@@ -60,12 +63,12 @@ class Connection:
 
             idl(int): identifier of the page of the link .
         '''
-        r = requests.get(os.path.join(self.host+'/anechodb/api/v1/'+link+
-                        '/%d'%idl))
-        if r.status_code==200:
+        r = requests.get(os.path.join(self.host + '/anechodb/api/v1/' + link +
+                                      '/%d' % idl))
+        if r.status_code == 200:
             print(json.loads(r.text))
 
-    def search_meas_by_instruments(self,var=''):
+    def search_meas_by_instruments(self, var:str='')->list:
         '''
         Search which measurements are linked at the instrument decided by var entry.
 
@@ -75,19 +78,22 @@ class Connection:
 
         Output:
 
-            m_id(array of int):The identifier of the measurement that use the instrument.
+            m_id(list of int):The identifier of the measurement that use the instrument.
         '''
 
         if var:
-            m_id=[]
-            idl=Connection._find_by_var(self,'instruments',var,True)
+            m_id = []
+            idl = Connection._find_by_var(self, 'instruments', var, True)
             if idl:
-                idl=idl.split('/')[-1]
-                rel="/api/v1/instruments/"+str(idl)
-                m_id=Connection._find_by_var(self,'measurements',rel,False)
-            return m_id
+                idl = idl.split('/')[-1]
+                rel = "/api/v1/instruments/" + str(idl)
+                m_id = Connection._find_by_var(
+                    self, 'measurements', rel, False)
+                return m_id
+            else:
+                raise Exception('Nothing found with this name: %s'%var)
 
-    def search_meas_by_projects(self,var=''):
+    def search_meas_by_projects(self, var:str='')->list:
         '''
         Search which measurements are linked at the project decided by var entry.
 
@@ -97,19 +103,22 @@ class Connection:
 
         Output:
 
-            m_id(array of int):The identifier of the measurement that use the project.
+            m_id(list of int):The identifier of the measurement that use the project.
         '''
 
         if var:
-            m_id=[]
-            idl=Connection._find_by_var(self,'projects',var,True)
+            m_id = []
+            idl = Connection._find_by_var(self, 'projects', var, True)
             if idl:
-                idl=idl.split('/')[-1]
-                rel="/api/v1/projects/"+str(idl)
-                m_id=Connection._find_by_var(self,'measurements',rel,False)
-            return m_id
+                idl = idl.split('/')[-1]
+                rel = "/api/v1/projects/" + str(idl)
+                m_id = Connection._find_by_var(
+                    self, 'measurements', rel, False)
+                return m_id
+            else:
+                raise Exception('Nothing found with this name: %s'%var)
 
-    def search_beam_by_meas (self,m_id=0):
+    def search_beam_by_meas(self, m_id:int=0)->list:
         '''
         Search which beams are linked at the measurement identifier decided by m_id entry.
 
@@ -119,16 +128,18 @@ class Connection:
 
         Output:
 
-            b_id(array of int):The identifier of the beams linked at the chosen measurement.
+            b_id(list of int):The identifier of the beams linked at the chosen measurement.
         '''
 
-        b_id=[]
+        b_id = []
         if m_id:
-            rel="/api/v1/measurements/"+str(m_id)
-            b_id=(Connection._find_by_var(self,'beams',rel,False))
-        return b_id
+            rel = "/api/v1/measurements/" + str(m_id)
+            b_id = (Connection._find_by_var(self, 'beams', rel, False))
+            return b_id
+        else:
+            raise Exception('No beam linked to measurement id: %d'%m_id)
 
-    def get_beam_in_dict_by_id(self,b_id):
+    def get_beam_in_dict_by_id(self, b_id: int) -> dict:
         '''
         Download the beam chosen by identifier as a dict variable.
 
@@ -140,45 +151,51 @@ class Connection:
 
             beam(dict):The beam downloaded. It has 4 fields as the original .h5 file plus the attribute field with some extra information.
         '''
-        beam={}
-        #Connect and dowload the chosen beam
+        beam = {}
+        # Connect and dowload the chosen beam
         head = {'Accept': 'application/x-hdf5'}
-        r=requests.get(os.path.join(self.host+'/anechodb/api/v1/beams/%d'%b_id),
-                       headers=head)
+        r = requests.get(
+            os.path.join(
+                self.host +
+                '/anechodb/api/v1/beams/%d' %
+                b_id),
+            headers=head)
         f_b, p_b = tempfile.mkstemp(suffix='.h5')
         try:
             with os.fdopen(f_b, 'wb') as tmp:
                 tmp.write(r.content)
-            #Create dict variable beam
-            fid=h5py.File(p_b,'r')
+            # Create dict variable beam
+            fid = h5py.File(p_b, 'r')
             for key in fid.keys():
-                if key=='DUT' or key=='REF':
-                    D=fid['%s'%key]
-                    A={}
+                if key == 'DUT' or key == 'REF':
+                    D = fid['%s' % key]
+                    A = {}
                     for k in D.keys():
-                        P={}
-                        P['Amplitude']=D['%s/Ampl'%k].value
-                        P['Phase']=D['%s/Phase'%k].value
-                        A['%s'%k]=P
-                    beam['%s'%key]=A
+                        P = {}
+                        P['Amplitude'] = D['%s/Ampl' % k].value
+                        P['Phase'] = D['%s/Phase' % k].value
+                        A['%s' % k] = P
+                    beam['%s' % key] = A
                 else:
-                    beam['%s'%key]=fid['%s'%key].value
-            A={}
+                    beam['%s' % key] = fid['%s' % key].value
+            A = {}
             for key in fid.attrs.keys():
-                A['%s'%key]=str(fid.attrs.get('%s'%key))
-            beam['Attributes']=A
+                A['%s' % key] = str(fid.attrs.get('%s' % key))
+            beam['Attributes'] = A
             fid.close()
         finally:
             os.remove(p_b)
         return beam
 #==============================================================================
-### Computation
+# Computation
 #==============================================================================
+
+
 class Computation:
     '''
     Class with various function useful to apply corrections at the beam patterns.
     '''
-    def make_beam_meanvar(beam,f=[],start=0,stop=None):
+    def make_beam_meanvar(beam:dict, f:list=[], start:int=0, stop:int=None)->dict:
         '''
         Apply mean and variance at the data stored in beam at the chosen frequencies.
 
@@ -196,22 +213,35 @@ class Computation:
 
             b(dict):The input beam with measurement changed with the mean and with a new field called Amplitude_Variance with the variance.
         '''
-        b=copy.deepcopy(beam)
+        b = copy.deepcopy(beam)
         if not isinstance(f, list):
-            f=list(f)
+            f = list(f)
         if not f:
-            f=b['Frequencies']
-        for i in range (len(f)):
-            id_f=np.where(b['Frequencies']==f[i])
-            if (b['DUT']['F_%d'%id_f[0][0]]['Amplitude'].ndim>1) and id_f:
-                b['DUT']['F_%d'%id_f[0][0]]['Amplitude_Variance']=np.var(b['DUT']
-                            ['F_%d'%id_f[0][0]]['Amplitude'][:,start:stop],axis=1)
-                b['DUT']['F_%d'%id_f[0][0]]['Amplitude']=np.mean(b['DUT']
-                            ['F_%d'%id_f[0][0]]['Amplitude'][:,start:stop],axis=1)
+            f = b['Frequencies']
+        for i in range(len(f)):
+            id_f = np.where(b['Frequencies'] == f[i])
+            if (b['DUT']['F_%d' % id_f[0][0]]['Amplitude'].ndim > 1) and id_f:
+                b['DUT'][
+                    'F_%d' %
+                    id_f[0][0]]['Amplitude_Variance'] = np.var(
+                    b['DUT'][
+                        'F_%d' %
+                        id_f[0][0]]['Amplitude'][
+                        :,
+                        start:stop],
+                    axis=1)
+                b['DUT'][
+                    'F_%d' %
+                    id_f[0][0]]['Amplitude'] = np.mean(
+                    b['DUT'][
+                        'F_%d' %
+                        id_f[0][0]]['Amplitude'][
+                        :,
+                        start:stop],
+                    axis=1)
         return b
 
-
-    def center_norm_beam(beam,f=[], center = True, norm = True):
+    def center_norm_beam(beam:dict, f:list=[], center=True, norm=True)->dict:
         '''
         Apply normalization and centering at the data stored in beam.
 
@@ -234,30 +264,34 @@ class Computation:
 
             If the beam is not copolar (it's seen in the Attributes field) input variables center and norm MUST be numbers to use this function.
         '''
-        b=copy.deepcopy(beam)
-        corr={}
-        P={}
-        if all([b['Attributes']['Type'][-1]!='O',(type(center) == bool or type(norm) == bool)]):
-            next
+        b = copy.deepcopy(beam)
+        corr = {}
+        P = {}
+        if all([b['Attributes']['Type'][-1] != 'O',
+                (isinstance(center, bool) or isinstance(norm, bool))]):
+            raise Exception('Input beam is a crosspolar, so center and norm entries must be float or int')
         else:
             if not isinstance(f, list):
-                f=list(f)
+                f = list(f)
             if not f:
-                f=b['Frequencies']
-            angle=b['Positions'][:,1]
-            for i in range (len(f)):
-                c={}
-                id_f=np.where(b['Frequencies']==f[i])
+                f = b['Frequencies']
+            angle = b['Positions'][:, 1]
+            for i in range(len(f)):
+                c = {}
+                id_f = np.where(b['Frequencies'] == f[i])
 
-                if b['DUT']['F_%d'%id_f[0][0]]['Amplitude'].ndim>1:
-                    power=np.mean(b['DUT']['F_%d'%id_f[0][0]]['Amplitude'],axis=1)
+                if b['DUT']['F_%d' % id_f[0][0]]['Amplitude'].ndim > 1:
+                    power = np.mean(
+                        b['DUT'][
+                            'F_%d' %
+                            id_f[0][0]]['Amplitude'],
+                        axis=1)
                 else:
-                    power=b['DUT']['F_%d'%id_f[0][0]]['Amplitude']
-
+                    power = b['DUT']['F_%d' % id_f[0][0]]['Amplitude']
 
                 # Find window at 3 dB
                 maxpower = np.max(power)
-                index_main_beam = np.where(power >= maxpower -3.)[0]
+                index_main_beam = np.where(power >= maxpower - 3.)[0]
                 main_beam_power = power[index_main_beam]
                 main_beam_angle = angle[index_main_beam]
 
@@ -265,43 +299,44 @@ class Computation:
                 parabola_fit = np.polyfit(main_beam_angle, main_beam_power, 2)
 
                 # Find parabola vertex
-                vertex_angle = -parabola_fit[1]/2./parabola_fit[0]
+                vertex_angle = -parabola_fit[1] / 2. / parabola_fit[0]
 
                 # Find parabola maximum
-                det = parabola_fit[1]**2 - 4.*parabola_fit[0]*parabola_fit[2]
+                det = parabola_fit[1]**2 - 4. * \
+                    parabola_fit[0] * parabola_fit[2]
                 vertex_power = -det / (4. * parabola_fit[0])
 
-                if type(center) == bool:
-                    if center == True:
+                if isinstance(center, bool):
+                    if center:
                         newangle = angle - vertex_angle
                     else:
                         newangle = angle
 
-                if type(center) == float or type(center) == int:
-                    vertex_angle=float(center)
+                if isinstance(center, float) or isinstance(center, int):
+                    vertex_angle = float(center)
                     newangle = angle - vertex_angle
 
-                if type(norm) == bool:
-                    if norm == True:
+                if isinstance(norm, bool):
+                    if norm:
                         newpower = power - vertex_power
                     else:
                         newpower = power
 
-                if type(norm) == int or type(norm) == float:
-                    vertex_power=float(norm)
+                if isinstance(norm, int) or isinstance(norm, float):
+                    vertex_power = float(norm)
                     newpower = power - vertex_power
 
-                b['DUT']['F_%d'%id_f[0][0]]['Amplitude']=newpower
-                P['F_%d'%id_f[0][0]]=newangle
-                c['Center']=vertex_angle
-                c['Norm']=vertex_power
-                corr['F_%d'%id_f[0][0]]=c
-            b['Original_positions']=b['Positions']
-            b['Positions']=P
-            b['Correction']=corr
+                b['DUT']['F_%d' % id_f[0][0]]['Amplitude'] = newpower
+                P['F_%d' % id_f[0][0]] = newangle
+                c['Center'] = vertex_angle
+                c['Norm'] = vertex_power
+                corr['F_%d' % id_f[0][0]] = c
+            b['Original_positions'] = b['Positions']
+            b['Positions'] = P
+            b['Correction'] = corr
         return b
 
-    def phase_center(L,d,angle,magn):
+    def phase_center(L:float, d:float, angle, magn):
         '''
          Compute correction in the case the phase center of the antenna is not placed at the rotation axis of the measuring system.
 
@@ -324,15 +359,17 @@ class Computation:
             newpower(array): The amplitudes with the correction applied.
         '''
 
-        corr_ang=np.rad2deg(np.arctan2(d*np.sin(np.deg2rad(angle)),L+d*(1-np.cos(np.deg2rad(angle)))))
-        newangle=angle+corr_ang
-        L_true=np.sqrt((d*np.sin(np.deg2rad(angle)))**2+(L+d*(1-np.cos(np.deg2rad(angle))))**2)
-        corr_pow=20*np.log(L_true/(L+d))
-        newpower=magn+corr_pow
-        corr_phase=(corr_ang,corr_pow)
-        return (corr_phase,newangle, newpower)
+        corr_ang = np.rad2deg(np.arctan2(
+            d * np.sin(np.deg2rad(angle)), L + d * (1 - np.cos(np.deg2rad(angle)))))
+        newangle = angle + corr_ang
+        L_true = np.sqrt((d * np.sin(np.deg2rad(angle)))**2 +
+                         (L + d * (1 - np.cos(np.deg2rad(angle))))**2)
+        corr_pow = 20 * np.log(L_true / (L + d))
+        newpower = magn + corr_pow
+        corr_phase = (corr_ang, corr_pow)
+        return (corr_phase, newangle, newpower)
 
-    def sim_diff (angle_sim,angle_mis,magn_sim,magn_mis):
+    def sim_diff(angle_sim, angle_mis, magn_sim, magn_mis):
         '''
         Compute difference between simulation and measured data.
         Check the nearest angle between simulation and measure and apply difference between them.
@@ -354,13 +391,14 @@ class Computation:
 
             diff(array):The array containing the difference computed.
         '''
-        diff=np.zeros(np.shape(angle_mis))
+        diff = np.zeros(np.shape(angle_mis))
         for i in range(0, np.shape(angle_mis)[0]):
-            index=np.where(angle_sim>=angle_mis[i])[0][0]
-            if ((angle_mis[i]-angle_sim[index-1]) < (angle_sim[index]-angle_mis[i])):
-                index=index-1
+            index = np.where(angle_sim >= angle_mis[i])[0][0]
+            if ((angle_mis[i] - angle_sim[index - 1])
+                    < (angle_sim[index] - angle_mis[i])):
+                index = index - 1
             else:
                 pass
-            diff[i]=magn_mis[i]-magn_sim[index]
+            diff[i] = magn_mis[i] - magn_sim[index]
             del index
         return diff
