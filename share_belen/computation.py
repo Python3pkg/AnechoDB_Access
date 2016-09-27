@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jul 27 11:46:28 2016
-
 @author: Jacopo Martelli
 """
 import numpy as np
@@ -40,22 +38,22 @@ def make_beam_meanvar(
         f = b['Frequencies']
     for i in range(len(f)):
         id_f = np.where(b['Frequencies'] == f[i])
-        if (b['DUT']['F_%d' % id_f[0][0]]['Amplitude'].ndim > 1) and id_f:
+        if (b['DUT']['F_%d' % id_f[0][0]]['Ampl'].ndim > 1) and id_f:
             b['DUT'][
                 'F_%d' %
-                id_f[0][0]]['Amplitude_Variance'] = np.var(
+                id_f[0][0]]['Ampl_Var'] = np.var(
                 b['DUT'][
                     'F_%d' %
-                    id_f[0][0]]['Amplitude'][
+                    id_f[0][0]]['Ampl'][
                     :,
                     start:stop],
                 axis=1)
             b['DUT'][
                 'F_%d' %
-                id_f[0][0]]['Amplitude'] = np.mean(
+                id_f[0][0]]['Ampl'] = np.mean(
                 b['DUT'][
                     'F_%d' %
-                    id_f[0][0]]['Amplitude'][
+                    id_f[0][0]]['Ampl'][
                     :,
                     start:stop],
                 axis=1)
@@ -102,14 +100,14 @@ def center_norm_beam(beam: dict, f: list=[], center=True, norm=True)->dict:
             c = {}
             id_f = np.where(b['Frequencies'] == f[i])
 
-            if b['DUT']['F_%d' % id_f[0][0]]['Amplitude'].ndim > 1:
+            if b['DUT']['F_%d' % id_f[0][0]]['Ampl'].ndim > 1:
                 power = np.mean(
                     b['DUT'][
                         'F_%d' %
-                        id_f[0][0]]['Amplitude'],
+                        id_f[0][0]]['Ampl'],
                     axis=1)
             else:
-                power = b['DUT']['F_%d' % id_f[0][0]]['Amplitude']
+                power = b['DUT']['F_%d' % id_f[0][0]]['Ampl']
 
             # Find window at 3 dB
             maxpower = np.max(power)
@@ -128,27 +126,27 @@ def center_norm_beam(beam: dict, f: list=[], center=True, norm=True)->dict:
                 parabola_fit[0] * parabola_fit[2]
             vertex_power = -det / (4. * parabola_fit[0])
 
-            if isinstance(center, bool):
+            if type(center == bool):
                 if center:
                     newangle = angle - vertex_angle
                 else:
                     newangle = angle
 
-            if isinstance(center, float) or isinstance(center, int):
+            if type(center) == float or type(center) == int:
                 vertex_angle = float(center)
                 newangle = angle - vertex_angle
 
-            if isinstance(norm, bool):
+            if type(norm == bool):
                 if norm:
                     newpower = power - vertex_power
                 else:
                     newpower = power
 
-            if isinstance(norm, int) or isinstance(norm, float):
+            if type(norm) == int or type(norm) == float:
                 vertex_power = float(norm)
                 newpower = power - vertex_power
 
-            b['DUT']['F_%d' % id_f[0][0]]['Amplitude'] = newpower
+            b['DUT']['F_%d' % id_f[0][0]]['Ampl'] = newpower
             P['F_%d' % id_f[0][0]] = newangle
             c['Center'] = vertex_angle
             c['Norm'] = vertex_power
