@@ -39,7 +39,7 @@ class Connection:
         if dat and var:
             for i in range(np.shape(s)[0]):
                 for j in range(np.shape(s[i]['data'])[0]):
-                    if var in s[i]['data'][j].values():
+                    if var in list(s[i]['data'][j].values()):
                         l = s[i]['href']
                         break  # there should be only a link for each entry var
         elif var:
@@ -63,7 +63,7 @@ class Connection:
         r = requests.get(os.path.join(self.host + '/anechodb/api/v1/' + link +
                                       '/%d' % idl))
         if r.status_code == 200:
-            print(json.loads(r.text))
+            print((json.loads(r.text)))
 
     def search_meas_by_instruments(self, var: str='')->list:
         '''
@@ -163,11 +163,11 @@ class Connection:
                 tmp.write(r.content)
             # Create dict variable beam
             fid = h5py.File(p_b, 'r')
-            for key in fid.keys():
+            for key in list(fid.keys()):
                 if key == 'DUT' or key == 'REF':
                     D = fid['%s' % key]
                     A = {}
-                    for k in D.keys():
+                    for k in list(D.keys()):
                         P = {}
                         P['Amplitude'] = D['%s/Ampl' % k].value
                         P['Phase'] = D['%s/Phase' % k].value
@@ -176,7 +176,7 @@ class Connection:
                 else:
                     beam['%s' % key] = fid['%s' % key].value
             A = {}
-            for key in fid.attrs.keys():
+            for key in list(fid.attrs.keys()):
                 A['%s' % key] = str(fid.attrs.get('%s' % key))
             beam['Attributes'] = A
             fid.close()
